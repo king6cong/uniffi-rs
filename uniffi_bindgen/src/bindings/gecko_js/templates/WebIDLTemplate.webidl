@@ -14,11 +14,15 @@ dictionary {{ rec.name()|class_name_webidl(context)  }} {
 {% endfor %}
 
 {%- for e in ci.iter_enum_definitions() %}
+{% if e.has_associated_data() %}
+MOZ_STATIC_ASSERT(false, "Sorry the gecko-js backend does not yet support enums with associated data");
+{% else %}
 enum {{ e.name()|class_name_webidl(context)  }} {
   {% for variant in e.variants() %}
-  "{{ variant|enum_variant_webidl }}"{%- if !loop.last %}, {% endif %}
+  "{{ variant.name()|enum_variant_webidl }}"{%- if !loop.last %}, {% endif %}
   {% endfor %}
 };
+{% endif %}
 {% endfor %}
 
 {%- let functions = ci.iter_function_definitions() %}

@@ -524,12 +524,8 @@ impl APIBuilder for weedle::Definition<'_> {
             weedle::Definition::Namespace(d) => d.process(ci),
             weedle::Definition::Enum(d) => {
                 // We check if the enum represents an error...
-                let is_error = if let Some(attrs) = &d.attributes {
-                    attributes::EnumAttributes::try_from(attrs)?.contains_error_attr()
-                } else {
-                    false
-                };
-                if is_error {
+                let attrs = attributes::EnumAttributes::try_from(d.attributes.as_ref())?;
+                if attrs.contains_error_attr() {
                     let err = d.convert(ci)?;
                     ci.add_error_definition(err)
                 } else {
@@ -542,8 +538,14 @@ impl APIBuilder for weedle::Definition<'_> {
                 ci.add_record_definition(rec)
             }
             weedle::Definition::Interface(d) => {
-                let obj = d.convert(ci)?;
-                ci.add_object_definition(obj)
+                let attrs = attributes::InterfaceAttributes::try_from(d.attributes.as_ref())?;
+                if attrs.contains_enum_attr() {
+                    let e = d.convert(ci)?;
+                    ci.add_enum_definition(e)
+                } else {
+                    let obj = d.convert(ci)?;
+                    ci.add_object_definition(obj)
+                }
             }
             weedle::Definition::CallbackInterface(d) => {
                 let obj = d.convert(ci)?;

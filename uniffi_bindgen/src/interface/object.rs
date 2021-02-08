@@ -157,7 +157,7 @@ impl APIConverter<Object> for weedle::InterfaceDefinition<'_> {
                     object.constructors.push(t.convert(ci)?);
                 }
                 weedle::interface::InterfaceMember::Operation(t) => {
-                    let mut method = t.convert(ci)?;
+                    let mut method: Method = t.convert(ci)?;
                     method.object_name.push_str(object.name.as_str());
                     object.methods.push(method);
                 }
@@ -245,10 +245,7 @@ impl APIConverter<Constructor> for weedle::interface::ConstructorInterfaceMember
             name: String::from("new"), // TODO: get the name from an attribute maybe?
             arguments: self.args.body.list.convert(ci)?,
             ffi_func: Default::default(),
-            attributes: match &self.attributes {
-                Some(attr) => ConstructorAttributes::try_from(attr)?,
-                None => Default::default(),
-            },
+            attributes: ConstructorAttributes::try_from(self.attributes.as_ref())?,
         })
     }
 }
@@ -372,10 +369,7 @@ impl APIConverter<Method> for weedle::interface::OperationInterfaceMember<'_> {
             return_type,
             static_,
             ffi_func: Default::default(),
-            attributes: match &self.attributes {
-                Some(attr) => MethodAttributes::try_from(attr)?,
-                None => Default::default(),
-            },
+            attributes: MethodAttributes::try_from(self.attributes.as_ref())?,
         })
     }
 }

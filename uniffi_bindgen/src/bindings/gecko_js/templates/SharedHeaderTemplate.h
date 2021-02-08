@@ -29,13 +29,17 @@ namespace dom {
 namespace {{ context.detail_name() }} {
 
 {% for e in ci.iter_enum_definitions() %}
+{% if e.has_associated_data() %}
+MOZ_STATIC_ASSERT(false, "Sorry the gecko-js backend does not yet support enums with associated data");
+// TODO : enums now need to deserialize from a RustBuffer
+{% else %}
 template <>
 struct ViaFfi<{{ e.name()|class_name_cpp(context) }}, uint32_t> {
   [[nodiscard]] static bool Lift(const uint32_t& aLowered, {{ e.name()|class_name_cpp(context) }}& aLifted) {
     switch (aLowered) {
       {% for variant in e.variants() -%}
       case {{ loop.index }}:
-        aLifted = {{ e.name()|class_name_cpp(context) }}::{{ variant|enum_variant_cpp }};
+        aLifted = {{ e.name()|class_name_cpp(context) }}::{{ variant.name()|enum_variant_cpp }};
         break;
       {% endfor -%}
       default:
@@ -48,7 +52,7 @@ struct ViaFfi<{{ e.name()|class_name_cpp(context) }}, uint32_t> {
   [[nodiscard]] static uint32_t Lower(const {{ e.name()|class_name_cpp(context) }}& aLifted) {
     switch (aLifted) {
       {% for variant in e.variants() -%}
-      case {{ e.name()|class_name_cpp(context) }}::{{ variant|enum_variant_cpp }}:
+      case {{ e.name()|class_name_cpp(context) }}::{{ variant.name()|enum_variant_cpp }}:
         return {{ loop.index }};
       {% endfor -%}
       default:
@@ -69,6 +73,7 @@ struct Serializable<{{ e.name()|class_name_cpp(context) }}> {
     aWriter.WriteUInt32(ViaFfi<{{ e.name()|class_name_cpp(context) }}, uint32_t>::Lower(aValue));
   }
 };
+{% endif %}
 {% endfor %}
 
 {% for rec in ci.iter_record_definitions() -%}

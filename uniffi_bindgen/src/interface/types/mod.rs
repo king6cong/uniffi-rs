@@ -133,14 +133,14 @@ impl Into<FFIType> for &Type {
             Type::Object(_) => FFIType::UInt64,
             // Callback interfaces are passed as opaque integer handles.
             Type::CallbackInterface(_) => FFIType::UInt64,
-            // Enums are passed as integers.
-            Type::Enum(_) => FFIType::UInt32,
             // Errors have their own special type.
             Type::Error(_) => FFIType::RustError,
             // Other types are serialized into a bytebuffer and deserialized on the other side.
-            Type::Record(_) | Type::Optional(_) | Type::Sequence(_) | Type::Map(_) => {
-                FFIType::RustBuffer
-            }
+            Type::Enum(_)
+            | Type::Record(_)
+            | Type::Optional(_)
+            | Type::Sequence(_)
+            | Type::Map(_) => FFIType::RustBuffer,
         }
     }
 }
