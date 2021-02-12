@@ -37,8 +37,9 @@
 //! assert_eq!(err.values()[1], "two");
 //! # Ok::<(), anyhow::Error>(())
 //! ```
+use std::convert::TryFrom;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 use super::{APIConverter, ComponentInterface};
 
@@ -51,6 +52,7 @@ use super::{APIConverter, ComponentInterface};
 pub struct Error {
     pub(super) name: String,
     pub(super) values: Vec<String>,
+    pub(super) docs: Vec<String>,
 }
 
 impl Error {
@@ -60,6 +62,10 @@ impl Error {
 
     pub fn values(&self) -> Vec<&str> {
         self.values.iter().map(|v| v.as_str()).collect()
+    }
+
+    pub fn docs(&self) -> Vec<&str> {
+        self.docs.iter().map(|v| v.as_str()).collect()
     }
 }
 
@@ -74,6 +80,33 @@ impl APIConverter<Error> for weedle::EnumDefinition<'_> {
                 .iter()
                 .map(|v| v.0.to_string())
                 .collect(),
+            docs: vec![],
+        })
+    }
+}
+
+impl APIConverter<Error> for &syn::ItemEnum {
+    fn convert(&self, _ci: &mut ComponentInterface) -> Result<Error> {
+        let attrs = super::synner::Attributes::try_from(&self.attrs)?;
+        Ok(Error {
+            name: self.ident.to_string(),
+            values: self
+                .variants
+                .iter()
+                .map(|v| {
+                    // To check for any unsupported attributes.
+                    super::synner::Attributes::try_from(&v.attrs)?;
+                    // TODO: docstrings for individual variants.
+                    if v.discriminant.is_some() {
+                        bail!("Explicit enum discriminants are not supported");
+                    }
+                    if !matches!(v.fields, syn::Fields::Unit) {
+                        bail!("Error enum variants cannot currently have fields");
+                    }
+                    Ok(v.ident.to_string())
+                })
+                .collect::<Result<Vec<_>>>()?,
+            docs: attrs.docs,
         })
     }
 }

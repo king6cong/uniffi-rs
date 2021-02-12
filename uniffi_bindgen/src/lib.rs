@@ -127,7 +127,11 @@ pub fn generate_component_scaffolding<P: AsRef<Path>>(
     let config_file_override = config_file_override.as_ref().map(|p| p.as_ref());
     let out_dir_override = out_dir_override.as_ref().map(|p| p.as_ref());
     let udl_file = udl_file.as_ref();
-    let component = parse_udl(&udl_file)?;
+    let component = if matches!(udl_file.extension(), Some(ext) if ext == "rs") {
+        parse_rust(&udl_file)?
+    } else {
+        parse_udl(&udl_file)?
+    };
     let _config = get_config(&component, udl_file, config_file_override);
     ensure_versions_compatibility(&udl_file, manifest_path_override)?;
     let mut filename = Path::new(&udl_file)
@@ -144,6 +148,26 @@ pub fn generate_component_scaffolding<P: AsRef<Path>>(
     if format_code {
         Command::new("rustfmt").arg(&out_dir).status()?;
     }
+    Ok(())
+}
+
+// Generate the infrastructural Rust code for implementing the UDL interface,
+// such as the `extern "C"` function definitions and record data types.
+pub fn generate_udl_from_rs<P: AsRef<Path>>(rs_file: P) -> Result<()> {
+    let rs_file = rs_file.as_ref();
+    println!("Let's make some magic!");
+    let component = parse_rust(&rs_file)?;
+    let config = get_config(&component, rs_file, None)?;
+    let out_dir = get_out_dir(&rs_file, None)?;
+    bindings::write_bindings(
+        &config.bindings,
+        &component,
+        &out_dir,
+        TargetLanguage::UDL,
+        false,
+        false,
+    )?;
+    println!("Done \\o/");
     Ok(())
 }
 
@@ -200,7 +224,12 @@ pub fn generate_bindings<P: AsRef<Path>>(
     let config_file_override = config_file_override.as_ref().map(|p| p.as_ref());
     let udl_file = udl_file.as_ref();
 
-    let component = parse_udl(&udl_file)?;
+    let component = if udl_file.ends_with(".rs") {
+        parse_rust(&udl_file)?
+    } else {
+        parse_udl(&udl_file)?
+    };
+
     let config = get_config(&component, udl_file, config_file_override)?;
     let out_dir = get_out_dir(&udl_file, out_dir_override)?;
     for language in target_languages {
@@ -321,6 +350,11 @@ fn parse_udl(udl_file: &Path) -> Result<ComponentInterface> {
         slurp_file(udl_file).map_err(|_| anyhow!("Failed to read UDL from {:?}", &udl_file))?;
     udl.parse::<interface::ComponentInterface>()
         .map_err(|e| anyhow!("Failed to parse UDL: {}", e))
+}
+
+fn parse_rust(rs_file: &Path) -> Result<ComponentInterface> {
+    let rs = slurp_file(rs_file).map_err(|_| anyhow!("Failed to read Rust from {:?}", &rs_file))?;
+    interface::ComponentInterface::from_rust(&rs).map_err(|e| anyhow!("Failed to parse UDL: {}", e))
 }
 
 fn slurp_file(file_name: &Path) -> Result<String> {

@@ -193,7 +193,7 @@ impl TypeUniverse {
     }
 
     /// Get the [Type] corresponding to a given name, if any.
-    fn get_type_definition(&self, name: &str) -> Option<Type> {
+    pub(super) fn get_type_definition(&self, name: &str) -> Option<Type> {
         self.type_definitions.get(name).cloned()
     }
 

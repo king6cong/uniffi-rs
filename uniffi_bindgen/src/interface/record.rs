@@ -43,6 +43,7 @@
 //! assert_eq!(record.fields()[1].name(), "value");
 //! # Ok::<(), anyhow::Error>(())
 //! ```
+use std::convert::TryFrom;
 
 use anyhow::{bail, Result};
 
@@ -55,10 +56,11 @@ use super::{APIConverter, ComponentInterface};
 /// In the FFI these are represented as a byte buffer, which one side explicitly
 /// serializes the data into and the other serializes it out of. So I guess they're
 /// kind of like "pass by clone" values.
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Default, Hash)]
 pub struct Record {
     pub(super) name: String,
     pub(super) fields: Vec<Field>,
+    pub(super) docs: Vec<String>,
 }
 
 impl Record {
@@ -67,6 +69,9 @@ impl Record {
     }
     pub fn fields(&self) -> Vec<&Field> {
         self.fields.iter().collect()
+    }
+    pub fn docs(&self) -> Vec<&str> {
+        self.docs.iter().map(String::as_str).collect()
     }
 }
 
@@ -81,6 +86,27 @@ impl APIConverter<Record> for weedle::DictionaryDefinition<'_> {
         Ok(Record {
             name: self.identifier.0.to_string(),
             fields: self.members.body.convert(ci)?,
+            ..Default::default()
+        })
+    }
+}
+
+impl APIConverter<Record> for &syn::ItemStruct {
+    fn convert(&self, ci: &mut ComponentInterface) -> Result<Record> {
+        let attrs = super::synner::Attributes::try_from(&self.attrs)?;
+        let fields = match &self.fields {
+            syn::Fields::Unit => vec![],
+            syn::Fields::Unnamed(_) => bail!("Records can only have named fields"),
+            syn::Fields::Named(f) => f
+                .named
+                .iter()
+                .map(|f| f.convert(ci))
+                .collect::<Result<Vec<_>>>()?,
+        };
+        Ok(Record {
+            name: self.ident.to_string(),
+            fields,
+            docs: attrs.docs,
         })
     }
 }

@@ -1,0 +1,15 @@
+{{ e.docs()|docstring(0) }}
+{% if e.has_associated_data() %}
+[Enum]
+interface {{ e.name() }} {
+  {%- for variant in e.variants() %}
+  {{ variant.name() }}({% call udl::field_list_decl(variant) %});
+  {%- endfor %}
+};
+{% else %}
+enum {{ e.name() }} {
+  {%- for variant in e.variants() %}
+  "{{ variant.name() }}",
+  {%- endfor %}
+};
+{% endif %}

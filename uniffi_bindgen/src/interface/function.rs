@@ -191,6 +191,39 @@ impl APIConverter<Argument> for weedle::argument::SingleArgument<'_> {
     }
 }
 
+impl APIConverter<Argument> for &syn::FnArg {
+    fn convert(&self, ci: &mut ComponentInterface) -> Result<Argument> {
+        let mut by_ref = false;
+        let (name, type_) = match self {
+            syn::FnArg::Receiver(_) => bail!("Cannot convert `self` arguments"),
+            syn::FnArg::Typed(p) => {
+                let name = super::synner::name_from_pattern(&p.pat)?;
+                if name == "self" {
+                    bail!("Cannot convert `self` arguments");
+                }
+                let type_ = match *p.ty {
+                    syn::Type::Reference(ref rt) => {
+                        by_ref = true;
+                        ci.resolve_type_expression(&*rt.elem)?
+                    }
+                    ref t => ci.resolve_type_expression(&*t)?,
+                };
+                (name, type_)
+            }
+        };
+        if let Type::Object(_) = type_ {
+            bail!("Objects cannot currently be passed as arguments");
+        }
+        Ok(Argument {
+            name,
+            type_,
+            by_ref,
+            optional: false,
+            default: None,
+        })
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -74,6 +74,11 @@ fn main() -> Result<()> {
                 .arg(clap::Arg::with_name("udl_file").required(true)),
         )
         .subcommand(
+            clap::SubCommand::with_name("automagic")
+                .about("Do some magic ;-)")
+                .arg(clap::Arg::with_name("rs_file").required(true)),
+        )
+        .subcommand(
             clap::SubCommand::with_name("test")
             .about("Run test scripts against foreign language bindings")
             .arg(clap::Arg::with_name("cdylib_dir").required(true).help("Path to the directory containing the cdylib the scripts will be testing against."))
@@ -101,6 +106,9 @@ fn main() -> Result<()> {
             m.value_of_os("out_dir"),
             m.value_of_os("manifest"),
             !m.is_present("no_format"),
+        )?,
+        ("automagic", Some(m)) => uniffi_bindgen::generate_udl_from_rs(
+            m.value_of_os("rs_file").unwrap(), // Required
         )?,
         ("test", Some(m)) => uniffi_bindgen::run_tests(
             m.value_of_os("cdylib_dir").unwrap(),           // Required

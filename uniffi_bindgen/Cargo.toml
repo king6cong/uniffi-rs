@@ -23,6 +23,8 @@ heck = "0.3"
 clap = { version = "2", default-features = false }
 serde = "1"
 toml = "0.5"
+quote = "1.0"
+syn = { version = "1.0", features = ["extra-traits", "full"] }
 
 # Workaround for an issue with `bitvec` on newer rusts, which we get via `nom`.
 # Hopefully we'll be able to remove this after a new release of `nom`.

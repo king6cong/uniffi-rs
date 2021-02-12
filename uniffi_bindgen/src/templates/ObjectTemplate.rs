@@ -67,6 +67,7 @@ uniffi::deps::lazy_static::lazy_static! {
 //
 // Other operations are not yet supported, since they would involve much more
 // complicated semantics around references.
+#[doc(hidden)]
 unsafe impl uniffi::ViaFfi for {{ obj.name() }} {
     type FfiType = u64;
 
